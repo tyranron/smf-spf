@@ -80,10 +80,10 @@ eq = $(if $(or $(1),$(2)),$(and $(findstring $(1),$(2)),\
 #	make docker-image [no-cache=(yes|no)] [VERSION=]
 
 no-cache ?= no
-no-cache-arg = $(if $(call eq, $(no-cache), yes), --no-cache, $(empty))
 
 docker-image:
-	docker build -t $(DOCKER_IMAGE_NAME):$(VERSION) ./
+	docker build $(if $(call eq, $(no-cache), yes), --no-cache, $(empty)) \
+	    -t $(DOCKER_IMAGE_NAME):$(VERSION) .
 
 
 
@@ -92,9 +92,12 @@ docker-image:
 # Usage:
 #	make docker-tags [VERSION=] [DOCKER_TAGS=t1,t2,...]
 
-tags:
-	$(foreach tag, $(subst $(comma), $(space), $(DOCKER_TAGS)), \
-		docker tag $(DOCKER_IMAGE_NAME):$(VERSION) $(IMAGE_NAME):$(tag) ;)
+docker-tags:
+	(set -e ; $(foreach tag, $(subst $(comma), $(space), $(DOCKER_TAGS)), \
+		docker tag $(DOCKER_IMAGE_NAME):$(VERSION) \
+		           $(DOCKER_IMAGE_NAME):$(tag) ; \
+	))
+
 
 
 # Manually push Docker images to Docker Hub.
@@ -103,5 +106,10 @@ tags:
 #	make docker-push [DOCKER_TAGS=t1,t2,...]
 
 docker-push:
-	$(foreach tag, $(subst $(comma), $(space), $(DOCKER_TAGS)), \
-		docker push $(DOCKER_IMAGE_NAME):$(tag) ;)
+	(set -e ; $(foreach tag, $(subst $(comma), $(space), $(DOCKER_TAGS)), \
+		docker push $(DOCKER_IMAGE_NAME):$(tag) ; \
+	))
+
+
+
+.PHONY: docker-image docker-tags docker-push

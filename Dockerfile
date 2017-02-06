@@ -1,10 +1,14 @@
-FROM alpine:edge
+FROM alpine:3.5
 
 
-ADD https://github.com/just-containers/s6-overlay/releases/download/v1.18.1.5/s6-overlay-amd64.tar.gz /tmp/
-
-RUN tar xzf /tmp/s6-overlay-amd64.tar.gz -C / \
- && rm -rf /tmp/s6-overlay-amd64.tar.gz
+# Install s6-overlay
+RUN apk add --update --no-cache curl \
+ && curl -L -o /tmp/s6-overlay.tar.gz \
+         https://github.com/just-containers/s6-overlay/releases/download/v1.19.1.1/s6-overlay-amd64.tar.gz \
+ && tar -xzf /tmp/s6-overlay.tar.gz -C / \
+ && apk del curl \
+ && rm -rf /tmp/s6-overlay.tar.gz \
+           /var/cache/apk/*
 
 ENV S6_KEEP_ENV=1 \
     S6_CMD_WAIT_FOR_SERVICES=1
@@ -12,7 +16,7 @@ ENV S6_KEEP_ENV=1 \
 
 COPY Makefile smf-spf.c /tmp/src/
 
-RUN echo "@community http://dl-cdn.alpinelinux.org/alpine/edge/community" \
+RUN echo "@community http://dl-cdn.alpinelinux.org/alpine/v3.5/community" \
       >> /etc/apk/repositories \
 
  # Upgrade existing packages & install runtime dependencies
@@ -42,6 +46,7 @@ COPY smf-spf.conf /etc/smfs/
 COPY LICENSE COPYING readme README.md /usr/share/doc/smf-spf/
 
 RUN chmod +x /etc/services.d/*/run \
+             /etc/cont-init.d/* \
 
  # Prepare default configuration
  && sed -i -r 's/^#?Daemonize\s.*$/Daemonize off/g' /etc/smfs/smf-spf.conf \
@@ -54,7 +59,6 @@ RUN chmod +x /etc/services.d/*/run \
 
 
 EXPOSE 8890
-
 
 ENTRYPOINT ["/init"]
 
