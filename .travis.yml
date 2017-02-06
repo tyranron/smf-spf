@@ -1,4 +1,7 @@
 language: c
+sudo: false
+services:
+  - docker
 compiler:
   - clang
   - gcc
@@ -9,10 +12,12 @@ before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -y libmilter-dev libspf2-dev libspf2-2 opendkim-tools lcov
   - gem install coveralls-lcov
+  - make docker-image VERSION=test
 script:
   -  make
   -  make coverage
-  - ./run_tests.sh
+  -  make test-milter
+  -  make test-docker VERSION=test
 after_success:
   - lcov --directory . --capture --output-file coverage.info
   - lcov --remove coverage.info 'tests/*' 'usr/*' --output-file coverage.info

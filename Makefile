@@ -58,11 +58,11 @@ install:
 
 
 #
-# Making Docker stuff.
+# Docker stuff.
 #
 
 DOCKER_IMAGE_NAME := smf-spf/smf-spf
-DOCKER_TAGS := $(VERSION),latest
+DOCKER_TAGS ?= 2.3,2,latest
 
 
 # Helper definitions
@@ -71,7 +71,6 @@ empty :=
 space := $(empty) $(empty)
 eq = $(if $(or $(1),$(2)),$(and $(findstring $(1),$(2)),\
                                 $(findstring $(2),$(1))),1)
-
 
 
 # Build Docker image.
@@ -83,8 +82,7 @@ no-cache ?= no
 
 docker-image:
 	docker build $(if $(call eq, $(no-cache), yes), --no-cache, $(empty)) \
-	    -t $(DOCKER_IMAGE_NAME):$(VERSION) .
-
+		-t $(DOCKER_IMAGE_NAME):$(VERSION) .
 
 
 # Tag Docker image with given tags.
@@ -99,7 +97,6 @@ docker-tags:
 	))
 
 
-
 # Manually push Docker images to Docker Hub.
 #
 # Usage:
@@ -112,4 +109,46 @@ docker-push:
 
 
 
-.PHONY: docker-image docker-tags docker-push
+
+#
+# Testing stuff.
+#
+
+
+# Run milter tests.
+#
+# Usage:
+#	make test-milter
+
+test-milter:
+	for testfile in tests/* ; do \
+		miltertest -vv -s $$testfile ; \
+	done
+
+
+# Run tests for Docker image.
+#
+# Usage:
+#	make test-docker [VERSION=]
+
+BATS_VER ?= 0.4.0
+
+test-docker:
+ifeq ($(wildcard $(PWD)/tests/docker/bats),)
+	mkdir -p $(PWD)/tests/docker/bats/vendor
+	curl -L -o $(PWD)/tests/docker/bats/vendor/bats.tar.gz \
+		https://github.com/sstephenson/bats/archive/v$(BATS_VER).tar.gz
+	tar -xzf $(PWD)/tests/docker/bats/vendor/bats.tar.gz \
+		-C $(PWD)/tests/docker/bats/vendor
+	rm -f $(PWD)/tests/docker/bats/vendor/bats.tar.gz
+	ln -s $(PWD)/tests/docker/bats/vendor/bats-$(BATS_VER)/libexec/* \
+		$(PWD)/tests/docker/bats/
+endif
+	IMAGE=$(DOCKER_IMAGE_NAME):$(VERSION) \
+		./tests/docker/bats/bats tests/docker/suite.bats
+
+
+
+
+.PHONY: docker-image docker-tags docker-push \
+        test-milter test-docker
