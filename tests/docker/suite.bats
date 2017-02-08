@@ -16,3 +16,14 @@
 
   [ "$actual" = "$expected" ]
 }
+
+
+@test "smf-spf is installed" {
+  run docker run --rm $IMAGE which smf-spf
+  [ "$status" -eq 0 ]
+}
+
+@test "smf-spf runs ok" {
+  run docker run --rm $IMAGE smf-spf --help
+  [ "$status" -eq 0 ]
+}
